@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import Filter from "./components/Filter"
 import PersonForm from "./components/PersonForm"
 import Persons from "./components/Persons"
+import Notification from "./components/Notification"
 import phonebookServices from "./services/phonebookServices"
 
 const App = () => {
@@ -10,6 +11,7 @@ const App = () => {
   const [newName, setNewName] = useState("")
   const [newNumber, setNewNumber] = useState("")
   const [filter, setFilter] = useState("")
+  const [notification, setNotification] = useState({})
 
   useEffect(() => {
     phonebookServices 
@@ -17,12 +19,11 @@ const App = () => {
       .then(data => setPersons(data))
   }, [])
 
-  const handleNameChange = (event) => {
-    setNewName(event.target.value)
-  }
-
-  const handleNumberChange = (event) => {
-    setNewNumber(event.target.value)
+  const showNotification = (notificationObj) => {
+    setNotification(notificationObj)
+    setTimeout(() => {
+      setNotification({})
+    }, 5000)
   }
 
   const manageDuplicate = (name) => {
@@ -41,9 +42,18 @@ const App = () => {
       }
       phonebookServices.updateNumber(duplicate.id, newInfo)
       setPersons(persons.map(person => person.name === name ? newInfo : person))
+      showNotification({type: "notice", message: `${name}'s number updated`})
       setNewName("")
       setNewNumber("")
     }
+  }
+
+  const handleNameChange = (event) => {
+    setNewName(event.target.value)
+  }
+
+  const handleNumberChange = (event) => {
+    setNewNumber(event.target.value)
   }
 
   const handleNewName = (event) => {
@@ -57,9 +67,9 @@ const App = () => {
       name: newName,
       number: newNumber
     }
-
     phonebookServices.createNewPerson(newPerson)
     setPersons(persons.concat(newPerson))
+    showNotification({type: "notice", message: `Added ${newName}`})
     setNewName("")
     setNewNumber("")
   }
@@ -68,11 +78,17 @@ const App = () => {
     setFilter(event.target.value)
   }
 
-  const handleDeleteClick = (id) => {
-    const person = persons.find(p => p.id === id)
+  const handleDeleteClick = (name) => {
+    const person = persons.find(p => p.name === name)
     if (window.confirm(`Delete ${person.name}?`)) {
-      phonebookServices.deletePerson(id)
-      setPersons(persons.filter(person => person.id !== id))
+      phonebookServices
+        .deletePerson(person.id)
+        .then(() => showNotification({type: "notice", message: `Deleted ${person.name}`}))
+        .catch(err => showNotification({
+          type: "error", 
+          message: `Information of ${person.name} has already been removed from server`
+        }))
+      setPersons(persons.filter(person => person.name !== name))
     }
   }
 
@@ -87,6 +103,7 @@ const App = () => {
   return (
     <>
       <h2>Phonebook</h2>
+      <Notification {...notification} />
       <Filter filter={filter} handleChange={handleFilterChange} />
 
       <h3>Add new number</h3>
