@@ -1,4 +1,6 @@
 const express = require("express")
+const morgan = require("morgan")
+
 const app = express()
 
 const persons = [
@@ -26,6 +28,23 @@ const persons = [
 
 app.use(express.json())
 
+morgan.token("postBody", (req, res) => {
+  if (req.method === "POST") {
+    const { name, number, id } = req.body
+    return JSON.stringify({ name, number })
+  }
+})
+app.use(morgan((tokens, req, res) => {
+  return [
+    tokens.method(req, res),
+    tokens.url(req, res),
+    tokens.status(req, res),
+    tokens.res(req, res, "content-length"), "-",
+    tokens["response-time"](req, res), "ms",
+    tokens.postBody(req, res)
+  ].join(" ")
+}))
+
 app.get("/", (req, res) => {
   res.send("Phonebook API")
 })
@@ -48,7 +67,7 @@ app.post("/api/persons", (req, res) => {
   if (!person.name || !person.number) 
     return res.status(400).json({ error: "missing name or number" })
   if (persons.some(p => p.name === person.name)) 
-    return res.status(400).json({ error: 'name must be unique' })
+    return res.status(400).json({ error: "name must be unique" })
 
   let id 
   do {
@@ -74,7 +93,6 @@ app.delete("/api/persons/:id", (req, res) => {
 
   if (personIndx !== -1) {
     persons.splice(personIndx, 1)
-    console.log(persons)
     res.status(204).end()
   }
   res.status(404).end()
