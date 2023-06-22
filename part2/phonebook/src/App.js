@@ -67,8 +67,9 @@ const App = () => {
       name: newName,
       number: newNumber
     }
-    phonebookServices.createNewPerson(newPerson)
-    setPersons(persons.concat(newPerson))
+    phonebookServices
+      .createNewPerson(newPerson)
+      .then(person => setPersons(persons.concat(person)))
     showNotification({type: "notice", message: `Added ${newName}`})
     setNewName("")
     setNewNumber("")
