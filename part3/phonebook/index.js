@@ -1,5 +1,6 @@
 const express = require("express")
 const morgan = require("morgan")
+const cors = require("cors")
 
 const app = express()
 
@@ -26,7 +27,10 @@ const persons = [
   }
 ]
 
+// MIDDLEWARE
 app.use(express.json())
+app.use(cors())
+app.use(express.static("build"))
 
 morgan.token("postBody", (req, res) => {
   if (req.method === "POST") {
@@ -45,6 +49,7 @@ app.use(morgan((tokens, req, res) => {
   ].join(" ")
 }))
 
+// ROUTES
 app.get("/", (req, res) => {
   res.send("Phonebook API")
 })
@@ -93,12 +98,13 @@ app.delete("/api/persons/:id", (req, res) => {
 
   if (personIndx !== -1) {
     persons.splice(personIndx, 1)
-    res.status(204).end()
+    return res.status(204).end()
   }
-  res.status(404).end()
+  return res.status(404).end()
 })
+// TODO: Route for updating number
 
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
