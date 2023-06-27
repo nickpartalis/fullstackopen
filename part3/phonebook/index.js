@@ -1,8 +1,10 @@
+require("dotenv").config()
 const express = require("express")
 const morgan = require("morgan")
 const cors = require("cors")
 
 const app = express()
+const Person = require("./models/person")
 
 const persons = [
   { 
@@ -64,24 +66,33 @@ app.get("/info", (req, res) => {
 })
 
 app.get("/api/persons", (req, res) => {
-  res.json(persons)
+  Person.find({}).then(notes => {
+    res.json(notes)
+  })
 })
 
 app.post("/api/persons", (req, res) => {
-  const person = req.body
-  if (!person.name || !person.number) 
+  const body = req.body
+  console.log(body)
+  if (!body.name || !body.number) 
     return res.status(400).json({ error: "missing name or number" })
-  if (persons.some(p => p.name === person.name)) 
-    return res.status(400).json({ error: "name must be unique" })
 
-  let id 
-  do {
-    id = Math.floor(Math.random() * 100000)
-  } while (persons.some(person => person.id === id))
-  person.id = id
+  // let id 
+  // do {
+  //   id = Math.floor(Math.random() * 100000)
+  // } while (persons.some(person => person.id === id))
+  // person.id = id
 
-  persons.push(person)
-  res.status(201).json(person)
+  // persons.push(person)
+  const person = new Person({
+    name: body.name,
+    number: body.number
+  })
+  
+  person.save().then(savedPerson => {
+    res.status(201).json(person)
+  })
+  // res.status(201).json(person)
 })
 
 app.get("/api/persons/:id", (req, res) => {
