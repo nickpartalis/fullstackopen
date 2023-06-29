@@ -41,8 +41,13 @@ const App = () => {
         number: newNumber
       }
       phonebookServices.updateNumber(duplicate.id, newInfo)
-      setPersons(persons.map(person => person.name === name ? newInfo : person))
-      showNotification({type: "notice", message: `${name}'s number updated`})
+        .then(_ => {
+          setPersons(persons.map(person => person.name === name ? newInfo : person))
+          showNotification({type: "notice", message: `${name}'s number updated`})
+        })
+        .catch(err => 
+          showNotification({type: "error", message: err.response.data.error})
+        )
       setNewName("")
       setNewNumber("")
     }
@@ -67,10 +72,15 @@ const App = () => {
       name: newName,
       number: newNumber
     }
-    phonebookServices
-      .createNewPerson(newPerson)
-      .then(person => setPersons(persons.concat(person)))
-    showNotification({type: "notice", message: `Added ${newName}`})
+    phonebookServices.createNewPerson(newPerson)
+      .then(person => {
+        setPersons(persons.concat(person))
+        showNotification({type: "notice", message: `Added ${newName}`})
+      })
+      .catch(err => 
+        showNotification({type: "error", message: err.response.data.error})
+      )
+    
     setNewName("")
     setNewNumber("")
   }
