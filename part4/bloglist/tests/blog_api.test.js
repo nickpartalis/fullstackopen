@@ -64,10 +64,10 @@ describe('POST /api/blogs', () => {
       .expect(201)
       .expect('Content-Type', /application\/json/)
 
-    const response = await api.get('/api/blogs')
-    expect(response.body.length).toBe(initialBlogs.length + 1)
+    const blogsAfter = await Blog.find({})
+    expect(blogsAfter.length).toBe(initialBlogs.length + 1)
 
-    const titles = response.body.map(r => r.title)
+    const titles = blogsAfter.map(blog => blog.title)
     expect(titles).toContain('New Blog')
   })
 
@@ -100,6 +100,39 @@ describe('POST /api/blogs', () => {
       .post('/api/blogs')
       .send(noUrlBlog)
       .expect(400)
+  })
+})
+
+describe('DELETE /api/blogs/:id', () => {
+  test('existing blogs are deleted normally, backend responds with 204', async () => {
+    const firstBlog = await Blog.findOne({ title: 'First Blog' })
+
+    await api
+      .delete(`/api/blogs/${firstBlog.id}`)
+      .expect(204)
+
+    const blogsAfter = await Blog.find({})
+    expect(blogsAfter.length).toBe(initialBlogs.length - 1)
+    expect(blogsAfter).not.toContain(firstBlog)
+  })
+})
+
+describe('PUT /api/blogs/:id', () => {
+  test('updating a blog works as intended', async () => {
+    const { title, author, url, likes, id } = await Blog.findOne({ title: 'First Blog' })
+    const updatedBlogBody = {
+      title, 
+      author, 
+      url,
+      likes: likes + 1
+    }
+
+    const response = await api
+      .put(`/api/blogs/${id}`)
+      .send(updatedBlogBody)
+
+    expect(response.statusCode).toBe(200)
+    expect(response.body.likes).toBe(likes + 1)
   })
 })
 
