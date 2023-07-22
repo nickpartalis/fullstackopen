@@ -1,7 +1,9 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
+const bcrypt = require('bcrypt')
 const app = require('../app')
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 const api = supertest(app)
 
@@ -133,6 +135,97 @@ describe('PUT /api/blogs/:id', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.body.likes).toBe(likes + 1)
+  })
+})
+
+describe('Users:', () => {
+  const initialUsers = [
+    { username: 'testUser1', password: 'test_password1' },
+    { username: 'testUser2', password: 'testPassword2' }
+  ]
+
+  beforeEach(async () => {
+    await User.deleteMany({})
+    
+    for (const user of initialUsers) {
+      const { username, password } = user
+      const passwordHash = await bcrypt.hash(password, 10)
+
+      await User.create({ username, passwordHash})
+    }
+  })
+
+  describe('GET /api/users', () => {
+    test('users are returned correctly as json', async () => {
+      await api
+        .get('/api/users')
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+
+      const users = await User.find({})
+      expect(users.length).toBe(initialUsers.length)
+
+      const usernames = users.map(user => user.username)
+      expect(usernames).toContain(initialUsers[0].username)
+    })
+    
+    test('the correct number of users is returned', async () => {
+      const response = await api.get('/api/users')
+      expect(response.body.length).toBe(initialUsers.length)
+    })
+  })
+
+  describe('POST /api/users', () => {
+    test('a valid user is added to the database', async () => {
+      const newUser = { 
+        username: 'testUser3', 
+        name: 'Test User Three',
+        password: 'testPassWord3' 
+      }
+  
+      await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+  
+      const usersAfter = await User.find({})
+      expect(usersAfter.length).toBe(initialUsers.length + 1)
+  
+      const usernames = usersAfter.map(user => user.username)
+      expect(usernames).toContain('testUser3')
+    })
+
+    test('if a user exists, backend responds with proper status code and error message', async () => {
+      const result = await api
+        .post('/api/users')
+        .send(initialUsers[0])
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      expect(result.body.error).toContain('expected `username` to be unique')
+
+      const usersAfter = await User.find({})
+      expect(usersAfter.length).toBe(initialUsers.length)
+    })
+
+    test('users with invalid info are not created', async () => {
+      const invalidUsers = [
+        { username: 'lo', password: 'nameTooShort'},
+        { username: 'passwordTooShort', password: "42"}
+      ]
+
+      for (const user of invalidUsers) {
+        await api
+          .post('/api/users')
+          .send(user)
+          .expect(400)
+          .expect('Content-Type', /application\/json/)
+      }
+
+      const usersAfter = await User.find({})
+      expect(usersAfter.length).toBe(initialUsers.length)
+    })
   })
 })
 

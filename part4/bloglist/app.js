@@ -6,6 +6,7 @@ const app = express()
 const cors = require('cors')
 const morgan = require('morgan')
 const blogsRouter = require('./controllers/blogs')
+const usersRouter = require('./controllers/users')
 const logger = require('./utils/logger')
 const config = require('./utils/config')
 const middleware = require('./utils/middleware')
@@ -22,6 +23,7 @@ mongoose.connect(config.MONGODB_URI)
 app.use(express.json())
 app.use(cors())
 app.use('/api/blogs', blogsRouter)
+app.use('/api/users', usersRouter)
 
 morgan.token('postBody', (req, res) => {
   if (req.method === 'POST') {
