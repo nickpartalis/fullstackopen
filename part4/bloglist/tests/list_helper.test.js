@@ -1,4 +1,4 @@
-const { dummy, totalLikes, favoriteBlog } = require('../utils/list_helper')
+const { dummy, totalLikes, favoriteBlog, mostBlogs, mostLikes } = require('../utils/list_helper')
 
 test('dummy returns one', () => {
   const blogs = []
@@ -21,11 +21,11 @@ const listWithManyBlogs = [
     title: 'First Blog',
     author: 'Author Name',
     url: 'http://www.blogsandstuff.com/1',
-    likes: 3,
+    likes: 4,
   },
   {
     title: 'Second Blog',
-    author: 'Author Name',
+    author: 'Blog Creator',
     url: 'http://www.blogsandstuff.com/2',
     likes: 5,
   },
@@ -45,7 +45,7 @@ describe('total likes', () => {
     expect(totalLikes(listWithOneBlog)).toBe(5)
   })
   test('of a bigger list is calculated correctly', () => {
-    expect(totalLikes(listWithManyBlogs)).toBe(10)
+    expect(totalLikes(listWithManyBlogs)).toBe(11)
   })
 })
 
@@ -58,5 +58,29 @@ describe('favorite blog', () => {
   })
   test('of a bigger list is calculated correctly', () => {
     expect(favoriteBlog(listWithManyBlogs)).toEqual(listWithManyBlogs[1])
+  })
+})
+
+describe('mostBlogs', () => {
+  test('when the list is empty is an empty object', () => {
+    expect(mostBlogs(emptyList)).toEqual({})
+  })
+  test('when there is only 1 blog is its author with count 1', () => {
+    expect(mostBlogs(listWithOneBlog)).toEqual({ author: 'Author Name', blogs: 1})
+  })
+  test('for more than 1 blog is displayed correctly', () => {
+    expect(mostBlogs(listWithManyBlogs)).toEqual({ author: 'Author Name', blogs: 2})
+  })
+})
+
+describe('mostLikes', () => {
+  test('when the list is empty is an empty object', () => {
+    expect(mostLikes(emptyList)).toEqual({})
+  })
+  test('when there is only 1 blog is its author with count 1', () => {
+    expect(mostLikes(listWithOneBlog)).toEqual({ author: 'Author Name', likes: 5})
+  })
+  test('for more than 1 blog is displayed correctly', () => {
+    expect(mostLikes(listWithManyBlogs)).toEqual({ author: 'Author Name', likes: 6})
   })
 })
