@@ -7,18 +7,22 @@ const tokenExtractor = (req, res, next) => {
   if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
     req.token = authorization.slice(7)
   }
-  else req.token = null
+  else req.token = ''
 
   next()
 }
 
 const userExtractor = async (req, res, next) => {
+  if (!req.token) return res.status(401).json({ error: 'token missing' })
+
   const decodedToken = jwt.verify(req.token, process.env.SECRET)
   const user = await User.findById(decodedToken.id)
+  
   if (!user) {
     return res.status(401).json({ error: 'token invalid' })
   }
   else req.user = user
+  
 
   next()
 }

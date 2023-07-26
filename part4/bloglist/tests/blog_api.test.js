@@ -7,137 +7,234 @@ const User = require('../models/user')
 
 const api = supertest(app)
 
-const initialBlogs =   [{
-  title: 'First Blog',
-  author: 'Author Name',
-  url: 'https://www.blogsandstuff.com/1',
-  likes: 3
-},
-{
-  title: 'Second Blog',
-  author: 'Author Name',
-  url: 'https://www.blogsandstuff.com/2',
-  likes: 5
-},
-{
-  title: 'Third Blog',
-  author: 'Author Name',
-  url: 'https://www.blogsandstuff.com/3',
-  likes: 2
-}]
+// Blog tests
+describe('Blogs:', () => {
+  let authorization
+  const initialBlogs =   [{
+    title: 'First Blog',
+    author: 'Author Name',
+    url: 'https://www.blogsandstuff.com/1',
+    likes: 3
+  },
+  {
+    title: 'Second Blog',
+    author: 'Author Name',
+    url: 'https://www.blogsandstuff.com/2',
+    likes: 5
+  },
+  {
+    title: 'Third Blog',
+    author: 'Author Name',
+    url: 'https://www.blogsandstuff.com/3',
+    likes: 2
+  }]
 
-beforeEach(async () => {
-  await Blog.deleteMany({})
-  await Blog.create(initialBlogs)
-})
+  beforeAll(async () => {
+    await User.deleteMany({})
+      
+    const [ username, password ] = [ 'testUser', 'test_password' ]
+    const passwordHash = await bcrypt.hash(password, 10)
+    await User.create({ username, passwordHash})
+  
+    const response = await api
+      .post('/api/login')
+      .send({ username, password })
 
-describe('GET /api/blogs', () => {
-  test('blogs are returned as json', async () => {
-    await api
-      .get('/api/blogs')
-      .expect(200)
-      .expect('Content-Type', /application\/json/)
+    authorization = `Bearer ${response.body.token}`
+  })
+
+  beforeEach(async () => {
+    await Blog.deleteMany({})
+    await Blog.create(initialBlogs)
+  })
+
+  describe('GET /api/blogs', () => {
+    test('blogs are returned as json', async () => {
+      await api
+        .get('/api/blogs')
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+    })
+    
+    test('the correct number of blogs is returned', async () => {
+      const response = await api.get('/api/blogs')
+      expect(response.body.length).toBe(initialBlogs.length)
+    })
+    
+    test('blogs have an id property and no _id property', async () => {
+      const response = await api.get('/api/blogs')
+      expect(response.body[0].id).toBeDefined()
+      expect(response.body[0]._id).not.toBeDefined()
+    })
   })
   
-  test('the correct number of blogs is returned', async () => {
-    const response = await api.get('/api/blogs')
-    expect(response.body.length).toBe(initialBlogs.length)
+  describe('POST /api/blogs', () => {
+    test('a valid blog with a valid token is added to the database and to the user\'s blog list', async () => {
+      const newBlog = {
+        title: 'New Blog',
+        author: 'Blogger Name',
+        url: 'https://www.blogsandstuff.com/4',
+        likes: 0
+      }
+
+      const response = await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .set({ Authorization: authorization })
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+  
+      const blogsAfter = await Blog.find({})
+      expect(blogsAfter.length).toBe(initialBlogs.length + 1)
+  
+      const titles = blogsAfter.map(blog => blog.title)
+      expect(titles).toContain('New Blog')
+
+      const user = await User.findOne({ username: 'testUser'})
+      const userBlogIds = user.blogs.map(blog => blog.toString())
+      expect(userBlogIds).toContain(response.body.id)
+    })
+
+    test('a blog post request without a token fails with status code 401', async () => {
+      const newBlog = {
+        title: 'New Blog',
+        author: 'Blogger Name',
+        url: 'https://www.blogsandstuff.com/4',
+        likes: 0
+      }
+
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(401)
+    })
+
+    test('a valid blog is added to the database, and is added to the user\'s blog list', async () => {
+      const newBlog = {
+        title: 'New Blog',
+        author: 'Blogger Name',
+        url: 'https://www.blogsandstuff.com/4',
+        likes: 0
+      }
+
+      const response = await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .set({ Authorization: authorization })
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+  
+      const blogsAfter = await Blog.find({})
+      expect(blogsAfter.length).toBe(initialBlogs.length + 1)
+  
+      const titles = blogsAfter.map(blog => blog.title)
+      expect(titles).toContain('New Blog')
+
+      const user = await User.findOne({ username: 'testUser'})
+      const userBlogIds = user.blogs.map(blog => blog.toString())
+      expect(userBlogIds).toContain(response.body.id)
+    })
+  
+    test('if the likes property is missing, it defaults to zero', async () => {
+      const zeroLikesBlog = {
+        title: 'Nobody Likes Me',
+        author: 'Blogger Name',
+        url: 'https://www.blogsandstuff.com/5'
+      }
+  
+      const response = await api
+        .post('/api/blogs')
+        .send(zeroLikesBlog)
+        .set({ Authorization: authorization })
+      expect(response.body.likes).toBe(0)
+    })
+  
+    test('if the blog has no title or no url, backend responds with 400', async () => {
+      const noTitleBlog = {
+        author: 'Dummy Blogger',
+        url: 'https://www.totallylegiturl.com'
+      }
+      await api
+        .post('/api/blogs')
+        .send(noTitleBlog)
+        .set({ Authorization: authorization })
+        .expect(400)
+  
+      const noUrlBlog = {
+        title: 'No URL required',
+        author: 'Dummy Blogger'
+      }
+      await api
+        .post('/api/blogs')
+        .send(noUrlBlog)
+        .set({ Authorization: authorization })
+        .expect(400)
+    })
   })
   
-  test('blogs have an id property and no _id property', async () => {
-    const response = await api.get('/api/blogs')
-    expect(response.body[0].id).toBeDefined()
-    expect(response.body[0]._id).not.toBeDefined()
-  })
-})
-
-describe('POST /api/blogs', () => {
-  test('a valid blog is added to the database', async () => {
-    const newBlog = {
-      title: 'New Blog',
+  describe('DELETE /api/blogs/:id', () => {
+    const blogToDelete = {
+      title: 'To Be Deleted',
       author: 'Blogger Name',
-      url: 'https://www.blogsandstuff.com/4',
+      url: 'https://www.deletemeplease.com',
       likes: 0
     }
 
-    await api
-      .post('/api/blogs')
-      .send(newBlog)
-      .expect(201)
-      .expect('Content-Type', /application\/json/)
+    test('existing blogs are deleted normally, backend responds with 204', async () => {
+      const response = await api
+        .post('/api/blogs')
+        .send(blogToDelete)
+        .set({ Authorization: authorization })
+        .expect(201)
+  
+      await api
+        .delete(`/api/blogs/${response.body.id}`)
+        .set({ Authorization: authorization })
+        .expect(204)
+  
+      const blogsAfter = await Blog.find({})
+      expect(blogsAfter.length).toBe(initialBlogs.length)
+      expect(blogsAfter).not.toContain(response.body)
 
-    const blogsAfter = await Blog.find({})
-    expect(blogsAfter.length).toBe(initialBlogs.length + 1)
-
-    const titles = blogsAfter.map(blog => blog.title)
-    expect(titles).toContain('New Blog')
+      const user = await User.findOne({ username: 'testUser'})
+      const userBlogIds = user.blogs.map(blog => blog.toString())
+      expect(userBlogIds).not.toContain(response.body.id)
+    })
   })
-
-  test('if the likes property is missing, it defaults to zero', async () => {
-    const zeroLikesBlog = {
-      title: 'Nobody Likes Me',
+  
+  describe('PUT /api/blogs/:id', () => {
+    const blogToUpdate = {
+      title: 'To Be Updated',
       author: 'Blogger Name',
-      url: 'https://www.blogsandstuff.com/5'
+      url: 'https://www.updatemeplease.com',
+      likes: 0
     }
 
-    const response = await api.post('/api/blogs').send(zeroLikesBlog)
-    expect(response.body.likes).toBe(0)
-  })
+    test('updating a blog works as intended', async () => {
+      const { body } = await api
+        .post('/api/blogs')
+        .send(blogToUpdate)
+        .set({ Authorization: authorization })
+        .expect(201)
 
-  test('if the blog has no title or no url, backend responds with 400', async () => {
-    const noTitleBlog = {
-      author: 'Dummy Blogger',
-      url: 'https://www.totallylegiturl.com'
-    }
-    await api
-      .post('/api/blogs')
-      .send(noTitleBlog)
-      .expect(400)
-
-    const noUrlBlog = {
-      title: 'No URL required',
-      author: 'Dummy Blogger'
-    }
-    await api
-      .post('/api/blogs')
-      .send(noUrlBlog)
-      .expect(400)
-  })
-})
-
-describe('DELETE /api/blogs/:id', () => {
-  test('existing blogs are deleted normally, backend responds with 204', async () => {
-    const firstBlog = await Blog.findOne({ title: 'First Blog' })
-
-    await api
-      .delete(`/api/blogs/${firstBlog.id}`)
-      .expect(204)
-
-    const blogsAfter = await Blog.find({})
-    expect(blogsAfter.length).toBe(initialBlogs.length - 1)
-    expect(blogsAfter).not.toContain(firstBlog)
+      const updatedBlogBody = {
+        ...body,
+        title: 'Updated Blog',
+        likes: body.likes + 1
+      }
+  
+      const response = await api
+        .put(`/api/blogs/${body.id}`)
+        .send(updatedBlogBody)
+        .set({ Authorization: authorization })
+  
+      expect(response.statusCode).toBe(200)
+      expect(response.body.title).toBe('Updated Blog')
+      expect(response.body.likes).toBe(body.likes + 1)
+    })
   })
 })
-
-describe('PUT /api/blogs/:id', () => {
-  test('updating a blog works as intended', async () => {
-    const { title, author, url, likes, id } = await Blog.findOne({ title: 'First Blog' })
-    const updatedBlogBody = {
-      title, 
-      author, 
-      url,
-      likes: likes + 1
-    }
-
-    const response = await api
-      .put(`/api/blogs/${id}`)
-      .send(updatedBlogBody)
-
-    expect(response.statusCode).toBe(200)
-    expect(response.body.likes).toBe(likes + 1)
-  })
-})
-
+// User tests
 describe('Users:', () => {
   const initialUsers = [
     { username: 'testUser1', password: 'test_password1' },
