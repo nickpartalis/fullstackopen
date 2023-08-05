@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Blog from './components/Blog'
 import LoginForm from "./components/LoginForm"
 import NewBlogForm from './components/NewBlogForm'
 import Notification from './components/Notification'
+import Togglable from './components/Togglable'
 import blogService from './services/blogs'
 import loginService from './services/login'
 
@@ -24,6 +25,8 @@ const App = () => {
       blogService.setToken(user.token)
     }
   }, [])
+
+  const newBlogFormRef = useRef()
 
   const showNotification = (notificationObj) => {
     setNotification(notificationObj)
@@ -62,6 +65,7 @@ const App = () => {
         type: "notice", 
         message: `Blog "${newBlog.title}" by ${newBlog.author} added.`
       })
+      newBlogFormRef.current.toggleVisibility()
     }
     catch (err) {
       const message = err.response.data.error || err.message
@@ -78,7 +82,9 @@ const App = () => {
         <button onClick={handleLogout}>Logout</button>
         </p>
 
-        <NewBlogForm createNew={handleCreateNew} />
+        <Togglable buttonLabel='New Blog' ref={newBlogFormRef}>
+          <NewBlogForm createNew={handleCreateNew} />
+        </Togglable>
 
         <h2>Blogs</h2>
         {blogs.map(blog =>

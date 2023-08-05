@@ -15,6 +15,13 @@
   color: red;
 }
 
-form input[type='text'], p button {
+.blog {
+  padding-top: 10px;
+  padding-left: 2px;
+  border: 1px solid;
+  margin-bottom: 5px;
+}
+
+form input[type='text'], .btn {
   margin-left: 6px;
 }
