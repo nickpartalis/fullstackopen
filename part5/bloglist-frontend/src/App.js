@@ -14,8 +14,10 @@ const App = () => {
 
   useEffect(() => {
     blogService.getAll()
-      .then(blogs => setBlogs(blogs))  
-  }, [blogs])
+      .then(blogs => setBlogs(blogs))
+    console.log(blogs)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(blogs)]) // prevents infinite GET request loop
 
   useEffect(() => {
     const loggedUserJSON = window.localStorage.getItem('loggedBlogappUser')
