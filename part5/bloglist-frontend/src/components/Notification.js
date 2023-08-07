@@ -3,7 +3,7 @@ const Notification = (notificationObj) => {
     return null
   }
 
-  const {type, message} = notificationObj
+  const { type, message } = notificationObj
   return (
     <div className={type}>
       {message}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+
 const LoginForm = ({ loginUser }) => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -34,9 +35,9 @@ const LoginForm = ({ loginUser }) => {
           />
         </div>
         <button type="submit">Login</button>
-      </form>      
+      </form>
     </div>
   )
 }
-  
+
 export default LoginForm
