@@ -1,3 +1,4 @@
+const { ObjectId } = require('mongodb')
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
 const { userExtractor } = require('../utils/middleware')
@@ -42,19 +43,22 @@ blogsRouter.delete('/:id', userExtractor, async (req, res) => {
 })
 
 blogsRouter.put('/:id', userExtractor, async (req, res) => {
-  const user = req.user
+  // const user = req.user
   const blogToUpdate = await Blog.findById(req.params.id)
 
   if (!blogToUpdate) {
     return res.status(404).json({error: 'blog does not exist'})
   }
-  if (user.id.toString() !== blogToUpdate.user.toString()) {
-    return res.status(401).json({ error: 'unauthorized' })
+  // if (user.id.toString() !== blogToUpdate.user.toString()) {
+  //   return res.status(401).json({ error: 'unauthorized' })
+  // }
+  const newBlog = {
+    ...req.body,
+    user: new ObjectId(req.body.user.id)
   }
-
   const updatedBlog = await Blog.findByIdAndUpdate(
     req.params.id,
-    req.body,
+    newBlog,
     { new: true, runValidators: true, context: 'query' },
   )
   res.json(updatedBlog)
